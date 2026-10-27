@@ -171,10 +171,9 @@ async def serve(home: Path, terminal: bool) -> None:
             gateway.add_channel(web)
             # In a container, SPARROW_WEB_HOST=0.0.0.0 (see the Dockerfile)
             host = os.environ.get("SPARROW_WEB_HOST", settings.webchat.host)
-            jobs.append(web.run(gateway, host, settings.webchat.port))
-            print(
-                f"Web chat: http://{host}:{settings.webchat.port}/?token=..."
-            )
+            port = settings.webchat.port
+            jobs.append(web.run(gateway, host, port))
+            print(f"Web chat: http://{host}:{port}/?token=...")
         if settings.telegram.enabled:
             from .channels.telegram import TelegramChannel
 

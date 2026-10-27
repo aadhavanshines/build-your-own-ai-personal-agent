@@ -12,14 +12,14 @@ Every file here is the tested file the book prints. If you typed the code from t
 | --- | --- | --- |
 | `sparrow/` | The agent: brain, workspace, tools, memory, skills, gateway, channels, scheduler and the safety layer | 4 to 19 |
 | `sparrow/templates/` | The starter workspace: `SOUL.md`, `USER.md`, `AGENTS.md`, `MEMORY.md`, `HEARTBEAT.md` and three skills | 5, 8, 12 |
-| `tests/` | 136 unit, functional, security and robustness tests, with a scripted brain and a fake Telegram | 20, 21, 23, 24 |
+| `tests/` | 150 unit, functional, security and robustness tests, with a scripted brain and a fake Telegram | 20, 21, 23, 24 |
 | `evals/` | End-to-end evaluations with the real model, the system test, the benchmark, and the recorded results | 22, 23, 24 |
-| `deploy/` | A systemd user service, a Dockerfile and a run script | 25 |
+| `deploy/` | A systemd user service (Linux), a launch agent (macOS), a Dockerfile and a run script | 25 |
 | `examples/` | The first Agent SDK example | 4 |
 
 ## Getting started
 
-You need Linux (or WSL2 on Windows), Python 3.12 or newer, and bubblewrap for the sandbox (Chapter 3).
+You need Linux, macOS or WSL2 on Windows, and Python 3.12 or newer (Chapter 3). On Linux, the sandbox needs bubblewrap; on a Mac it uses the sandbox built into macOS, so there is nothing extra to install.
 
 ```
 git clone https://github.com/aadhavanshines/build-your-own-ai-personal-agent.git
@@ -27,7 +27,7 @@ cd build-your-own-ai-personal-agent
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-sudo apt install bubblewrap        # Debian, Ubuntu, WSL2
+sudo apt install bubblewrap        # Linux only: Debian, Ubuntu, WSL2
 ```
 
 Run the tests. They need no API key and make no network requests:
@@ -60,7 +60,7 @@ The results recorded for the book are in `evals/results.log`, `evals/results.jso
 
 ## Versions
 
-The book was tested with Python 3.12, 3.13, 3.14 and 3.15 and the exact package versions in `requirements.txt`. The Tests workflow runs the test suite on all four versions on every push.
+The book was tested with Python 3.12, 3.13, 3.14 and 3.15 and the exact package versions in `requirements.txt`. The Tests workflow runs the test suite on Linux and macOS with all four versions on every push. On macOS, 4 tests of Linux-only protections are skipped, each with its reason.
 
 ## Notes
 

@@ -47,5 +47,8 @@ jobs:
           print(backend(), code, out)
           assert code == 0 and 'sandbox-ok' in out
           "
+      - name: Check the launch agent file (macOS)
+        if: runner.os == 'macOS'
+        run: plutil -lint deploy/local.sparrow.plist
       - name: Run the tests
         run: python -m pytest -v -rs
