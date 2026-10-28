@@ -11,6 +11,7 @@ import tempfile
 from dataclasses import dataclass, field
 
 from claude_agent_sdk import (
+    AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKError,
     ResultMessage,
@@ -39,6 +40,26 @@ class Reply:
     cost_usd: float = 0.0
     error: str | None = None
     tool_calls: list = field(default_factory=list)
+
+
+# US$ per million input and output tokens, for estimating the cost of a
+# turn that ended without the SDK's total (a timeout or an error). An
+# unknown model counts at the highest price, so the estimate errs high.
+PRICES = {"claude-sonnet-5-5": (2.0, 10.0), "claude-haiku-4-5": (1.0, 5.0)}
+HIGHEST = (10.0, 50.0)
+
+
+def estimate_cost(model: str, usages) -> float:
+    per_in, per_out = PRICES.get(model, HIGHEST)
+    total = 0.0
+    for u in usages:
+        tokens_in = (
+            u.get("input_tokens", 0)
+            + 1.25 * u.get("cache_creation_input_tokens", 0)
+            + 0.1 * u.get("cache_read_input_tokens", 0)
+        )
+        total += tokens_in * per_in + u.get("output_tokens", 0) * per_out
+    return total / 1_000_000
 
 
 def as_sdk_tool(t: Tool, ctx: Context):
@@ -72,16 +93,23 @@ class ClaudeBrain:
             max_turns=turn.max_turns,
         )
 
-    async def once(self, turn: Turn) -> Reply:
+    async def once(self, turn: Turn, usage: dict) -> Reply:
+        """`usage` collects each model call's token counts as they
+        arrive, so a turn cut short can still be priced."""
         result = None
         async with asyncio.timeout(turn.timeout):
             async for message in query(
                 prompt=turn.prompt, options=self.options(turn)
             ):
+                if isinstance(message, AssistantMessage) and message.usage:
+                    # One model call can arrive as several messages
+                    usage[message.message_id or id(message)] = message.usage
                 if isinstance(message, ResultMessage):
                     result = message
         if result is None:
-            return Reply("", error="no result from the model")
+            cost = estimate_cost(turn.model, usage.values())
+            error = "no result from the model"
+            return Reply("", cost, error, turn.ctx.calls)
         error = (
             None
             if result.subtype == "success" and not result.is_error
@@ -95,17 +123,23 @@ class ClaudeBrain:
         )
 
     async def respond(self, turn: Turn) -> Reply:
+        spent = 0.0  # by failed attempts, which cost money too
         for attempt in range(self.retries + 1):
+            usage: dict = {}
             try:
-                return await self.once(turn)
+                reply = await self.once(turn, usage)
+                reply.cost_usd += spent
+                return reply
             except (ClaudeSDKError, TimeoutError, OSError) as error:
+                spent += estimate_cost(turn.model, usage.values())
                 # Retry only if no tool ran: a retry must never repeat
                 # something that already happened.
                 if turn.ctx.calls or attempt == self.retries:
                     return Reply(
                         "",
-                        error=f"{type(error).__name__}: {error}",
-                        tool_calls=turn.ctx.calls,
+                        spent,
+                        f"{type(error).__name__}: {error}",
+                        turn.ctx.calls,
                     )
                 await asyncio.sleep(2 ** (attempt + 1))
         raise AssertionError("unreachable")
