@@ -158,25 +158,18 @@ class Watchdog:
 
     def processes(self) -> dict[int, int]:
         """{pid: memory in KB} for every process with the marker."""
+        ps = "ps -E -ww -o pid=,rss=,command= -U".split()
         out = subprocess.run(
-            [
-                "ps",
-                "-E",
-                "-ww",
-                "-U",
-                str(os.getuid()),
-                "-o",
-                "pid=,rss=,command=",
-            ],
+            ps + [str(os.getuid())],
             capture_output=True,
             text=True,
             errors="replace",
         ).stdout
         found = {}
         for line in out.splitlines():
-            pid, rss, rest = line.split(None, 2)
-            if self.marker in rest:
-                found[int(pid)] = int(rss)
+            parts = line.split(None, 2)
+            if len(parts) == 3 and self.marker in parts[2]:
+                found[int(parts[0])] = int(parts[1])
         return found
 
     def kill_all(self) -> None:

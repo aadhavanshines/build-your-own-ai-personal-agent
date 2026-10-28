@@ -179,7 +179,11 @@ async def test_skills_are_short_enough_to_read(make_gateway, core):
         (
             "tool",
             "write_skill",
-            {"name": "long", "description": "d", "instructions": "x" * 3001},
+            {
+                "name": "long",
+                "description": "d",
+                "instructions": "x" * 3001,
+            },
         ),
         ("say", lambda results: results[0]),
     ]
