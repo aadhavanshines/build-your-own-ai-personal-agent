@@ -47,19 +47,35 @@ class Reply:
 # unknown model counts at the highest price, so the estimate errs high.
 PRICES = {"claude-sonnet-5-5": (2.0, 10.0), "claude-haiku-4-5": (1.0, 5.0)}
 HIGHEST = (10.0, 50.0)
+MARGIN = 1.25  # for tokens the stream doesn't show, such as thinking
 
 
-def estimate_cost(model: str, usages) -> float:
+def estimate_cost(model: str, calls) -> float:
     per_in, per_out = PRICES.get(model, HIGHEST)
     total = 0.0
-    for u in usages:
+    for u in calls:
         tokens_in = (
             u.get("input_tokens", 0)
-            + 1.25 * u.get("cache_creation_input_tokens", 0)
+            + 2 * u.get("cache_creation_input_tokens", 0)  # 1-hour cache
             + 0.1 * u.get("cache_read_input_tokens", 0)
         )
-        total += tokens_in * per_in + u.get("output_tokens", 0) * per_out
-    return total / 1_000_000
+        # The streamed output count can be a partial one, so take at
+        # least a third of the characters written (a token is 3 or 4)
+        tokens_out = max(
+            u.get("output_tokens", 0), u.get("written", 0) // 3
+        )
+        total += tokens_in * per_in + tokens_out * per_out
+    return total * MARGIN / 1_000_000
+
+
+def add_usage(usage: dict, message: AssistantMessage) -> None:
+    """Record a message's token counts under its model call; one call
+    can arrive as several messages, one per block it wrote."""
+    call = usage.setdefault(message.message_id or id(message), {})
+    call["written"] = call.get("written", 0) + sum(
+        len(str(block)) for block in message.content
+    )
+    call.update(message.usage)
 
 
 def as_sdk_tool(t: Tool, ctx: Context):
@@ -102,8 +118,7 @@ class ClaudeBrain:
                 prompt=turn.prompt, options=self.options(turn)
             ):
                 if isinstance(message, AssistantMessage) and message.usage:
-                    # One model call can arrive as several messages
-                    usage[message.message_id or id(message)] = message.usage
+                    add_usage(usage, message)
                 if isinstance(message, ResultMessage):
                     result = message
         if result is None:

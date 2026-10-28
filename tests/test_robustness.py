@@ -83,11 +83,20 @@ async def test_brain_gives_up_after_its_retries(
 
 def test_cost_estimates():
     calls = [{"input_tokens": 1_000_000, "output_tokens": 100_000}]
-    assert estimate_cost("claude-sonnet-5-5", calls) == 2.0 + 1.0
-    assert estimate_cost("claude-haiku-4-5", calls) == 1.0 + 0.5
-    cached = [{"cache_read_input_tokens": 1_000_000}]
-    assert estimate_cost("claude-sonnet-5-5", cached) == pytest.approx(0.2)
-    assert estimate_cost("some-new-model", calls) == 10.0 + 5.0
+    # Prices plus a quarter for what the stream doesn't show
+    assert estimate_cost("claude-sonnet-5-5", calls) == (2.0 + 1.0) * 1.25
+    assert estimate_cost("claude-haiku-4-5", calls) == (1.0 + 0.5) * 1.25
+    assert estimate_cost("some-new-model", calls) == (10.0 + 5.0) * 1.25
+    cache = [
+        {"cache_read_input_tokens": 1_000_000},  # a tenth of the price
+        {"cache_creation_input_tokens": 1_000_000},  # twice the price
+    ]
+    sonnet = estimate_cost("claude-sonnet-5-5", cache)
+    assert sonnet == pytest.approx((0.2 + 4.0) * 1.25)
+    # A partial output count is raised to one token per 3 characters
+    partial = [{"output_tokens": 5, "written": 300_000}]
+    sonnet = estimate_cost("claude-sonnet-5-5", partial)
+    assert sonnet == pytest.approx(1.0 * 1.25)
 
 
 async def test_a_timed_out_turn_still_costs(core, monkeypatch, no_waiting):
@@ -107,9 +116,9 @@ async def test_a_timed_out_turn_still_costs(core, monkeypatch, no_waiting):
     turn = turn_for(core)
     turn.timeout = 0.1
     reply = await ClaudeBrain(retries=1).respond(turn)
-    # Two attempts, one model call each: 2 x (0.02 + 0.01)
+    # Two attempts, one model call each: 2 x (0.02 + 0.01) x 1.25
     assert reply.error.startswith("TimeoutError")
-    assert reply.cost_usd == pytest.approx(0.06)
+    assert reply.cost_usd == pytest.approx(0.075)
 
 
 async def test_the_ledger_records_a_failed_turns_cost(make_gateway, core):

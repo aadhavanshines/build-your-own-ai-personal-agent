@@ -12,7 +12,7 @@ Every file here is the tested file the book prints. If you typed the code from t
 | --- | --- | --- |
 | `sparrow/` | The agent: brain, workspace, tools, memory, skills, gateway, channels, scheduler and the safety layer | 4 to 19 |
 | `sparrow/templates/` | The starter workspace: `SOUL.md`, `USER.md`, `AGENTS.md`, `MEMORY.md`, `HEARTBEAT.md` and three skills | 5, 8, 12 |
-| `tests/` | 150 unit, functional, security and robustness tests, with a scripted brain and a fake Telegram | 20, 21, 23, 24 |
+| `tests/` | 161 unit, functional, security and robustness tests, with a scripted brain and a fake Telegram | 20, 21, 23, 24 |
 | `evals/` | End-to-end evaluations with the real model, the system test, the benchmark, and the recorded results | 22, 23, 24 |
 | `deploy/` | A systemd user service (Linux), a launch agent (macOS), a Dockerfile and a run script | 25 |
 | `examples/` | The first Agent SDK example | 4 |
@@ -46,6 +46,8 @@ python -m sparrow chat             # in the terminal
 python -m sparrow run              # web chat (and Telegram, once set up)
 ```
 
+To run Sparrow as a service, put the key in `~/.sparrow/state/model.env` instead (`ANTHROPIC_API_KEY=...`, with `chmod 600`); Sparrow reads it from there, so no service file holds it (Chapter 25).
+
 ## Evaluations with the real model
 
 These call the real model and cost money (about US$0.50 for the full run):
@@ -60,7 +62,7 @@ The results recorded for the book are in `evals/results.log`, `evals/results.jso
 
 ## Versions
 
-The book was tested with Python 3.12, 3.13, 3.14 and 3.15 and the exact package versions in `requirements.txt`. The Tests workflow runs the test suite on Linux and macOS with all four versions on every push. On macOS, 4 tests of Linux-only protections are skipped, each with its reason.
+The book was tested with Python 3.12, 3.13, 3.14 and 3.15 and the exact package versions in `requirements.txt`. The Tests workflow runs the test suite on Linux and macOS with all four versions on every push. On macOS, 4 tests of Linux-only protections are skipped, and on Linux 1 test of the macOS watchdog, each with its reason.
 
 ## Notes
 
