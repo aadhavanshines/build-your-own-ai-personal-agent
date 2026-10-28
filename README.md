@@ -56,7 +56,7 @@ python evals/system_test.py        # the real process, killed and restarted
 python evals/benchmark.py          # Sparrow's own overhead (free, no model)
 ```
 
-The results recorded for the book are in `evals/results.log`, `evals/results.json`, `evals/system-test.txt` and `evals/benchmark.json`: 48 of 48 real-model runs passed, the system test passed 11 of 11 checks, and Sparrow adds about 8 ms per message.
+The results recorded for the book are in `evals/results.log`, `evals/results.json`, `evals/system-test.txt` and `evals/benchmark.json`: 48 of 48 real-model runs passed, the system test passed 11 of 11 checks, and Sparrow adds about 7 ms per message.
 
 ## Versions
 
